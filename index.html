@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Out on the trails live tracking</title>
+    <link rel="stylesheet" href="./openlayers/css/ol.css" type="text/css">
+    <!-- The line below is only needed for old environments like Internet Explorer and Android 4.x -->
+    <!--<script src="https://cdn.polyfill.io/v2/polyfill.min.js?features=requestAnimationFrame,Element.prototype.classList,URL"></script>-->
+    <script src="./openlayers/build/ol.js"></script>
+    <script src="https://code.jquery.com/jquery-2.2.3.min.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+
+      <style>
+      .map:-moz-full-screen {
+        height: 100%;
+      }
+      .map:-webkit-full-screen {
+        height: 100%;
+      }
+      .map:-ms-fullscreen {
+        height: 100%;
+      }
+      .map:fullscreen {
+        height: 100%;
+      }
+      .ol-rotate {
+        top: 3em;
+      }
+    </style>
+  </head>
+    
+  <body>
+    <div id="map" class="map"></div>
+    <div id="popup">
+    <div id="info">&nbsp;</div>
+        
+    <script>
+      var raster = new ol.layer.Tile({
+        source: new ol.source.OSM()
+      });
+
+      // Style definition of the track outline.
+      var style = {
+        'Point': new ol.style.Style({
+          image: new ol.style.Circle({
+            fill: new ol.style.Fill({
+              color: 'rgba(0,0,255,0.4)'
+            }),
+            radius: 3,
+            stroke: new ol.style.Stroke({
+              color: '#00f',
+              width: 3
+            })
+          })
+        }),
+        'LineString': new ol.style.Style({
+          stroke: new ol.style.Stroke({
+            color: '#00f',
+            width: 3
+          })
+        }),
+        'MultiLineString': new ol.style.Style({
+          stroke: new ol.style.Stroke({
+            color: '#00f',
+            width: 3
+          })
+        })
+      };
+
+      // Define the styles of the icons used in the tracking..
+      var iconStyles = {
+          'checkpointicon': new ol.style.Style({
+              image: new ol.style.Icon({
+                  anchor: [0.5, 1],
+                  src: './images/checkpoint.png',
+                  scale: 0.3
+              })
+          }),
+
+          'startfinishicon': new ol.style.Style({
+              image: new ol.style.Icon({
+                  anchor: [0.5, 1],
+                  src: './images/startfinish.png',
+                  scale: 0.15
+              })
+          }),
+
+          'runnericon': new ol.style.Style({
+              image: new ol.style.Icon({
+                  anchor: [0.5, 1],
+                  src: './images/runner.png',
+                  scale: 0.7
+              })
+          })
+      };
+
+      /*
+       Load the GPX track as a vector layer.
+       */
+      var GPXTrack = new ol.layer.Vector({
+          source: new ol.source.Vector({
+              url: './course/course.gpx',
+              format: new ol.format.GPX()
+          }),
+          style: function(feature) {
+              return style[feature.getGeometry().getType()];
+          }
+      });
+        
+        /*
+        Load the checkpoints and start finish location.
+        
+        TODO: Find a way to load checkpoints of multiple styles from a file !!!
+        
+        TODO: Better checkpoint icon.    
+        
+        TODO: Better way to load multiple check points.
+
+        */
+
+      var checkpointSource = new ol.source.Vector({
+          //create empty vector
+      });
+
+
+      $(document).ready(function(){
+          // Read the course markers from the XML file.
+        $.ajax({
+            type: "GET",
+            url: "./course/markers.xml",
+            dataType: "xml",
+            success: function(xml) {
+
+                $(xml).find('marker').each(function(){
+                    var name = $(this).find('name').text();
+                    var description = $(this).find('description').text();
+                    var distance = $(this).find('distance').text();
+                    var longtitude = $(this).find('lon').text();
+                    var lattitude = $(this).find('lat').text();
+                    var type = $(this).find('type').text();
+
+                    addMarker(name, description, distance, longtitude, lattitude, type);
+                });
+            }
+        });
+      });
+
+
+      function addMarker(name, description, distance, longtitude, lattitude, type){
+
+
+          checkpointSource.addFeature(
+              new ol.Feature({
+                name: name,
+                description: description + '<br>' + distance,
+                type: 'checkpointicon',
+
+                geometry: new ol.geom.Point(ol.proj.fromLonLat([4.849000, 53.041833]))
+
+              }));
+
+      }
+
+/*
+Commented this because it is being replaced by logic that reads the markers from the xml file.
+      // Add the checkpoints to the source for the vector layer.
+      checkpointSource.addFeature(
+          new ol.Feature({
+              name: 'Checkpoint 1',
+              description: 'Oudeschild <br> 18.7 km',
+              type: 'checkpointicon',
+              geometry: new ol.geom.Point(ol.proj.fromLonLat([4.849000, 53.041833]))
+          }));
+
+      checkpointSource.addFeature(
+          new ol.Feature({
+              name: 'CP 2',
+              description: '28 km',
+              type: 'checkpointicon',
+              geometry: new ol.geom.Point(ol.proj.fromLonLat([4.814050, 53.040650]))
+      }));
+
+      checkpointSource.addFeature(
+          new ol.Feature({
+              name: 'CP 3',
+              description: '40 km',
+              type: 'checkpointicon',
+              geometry: new ol.geom.Point(ol.proj.fromLonLat([4.733300, 53.042967]))
+          }));
+
+      checkpointSource.addFeature(
+          new ol.Feature({
+              name: 'CP 4',
+              description: '50 km',
+              type: 'checkpointicon',
+              geometry: new ol.geom.Point(ol.proj.fromLonLat([4.756400, 53.102017]))
+          }));
+
+      checkpointSource.addFeature(
+          new ol.Feature({
+              name: 'CP 5',
+              description: '57 km',
+              type: 'checkpointicon',
+              geometry: new ol.geom.Point(ol.proj.fromLonLat([4.817017, 53.130917]))
+          }));
+
+      checkpointSource.addFeature(
+          new ol.Feature({
+              name: 'Start & Finish',
+              type: 'startfinishicon',
+              geometry: new ol.geom.Point(ol.proj.fromLonLat([4.862983, 53.173950]))
+          }));
+        */
+
+      // Create the vector layer with all the check point and start / finish markers.
+      var checkPointLayer = new ol.layer.Vector({
+          source: checkpointSource,
+          style: function (feature) {
+              return iconStyles[feature.get('type')];
+          }
+      });
+
+      // Define the runner icon with the initial start location on the course.
+      var runnerMarker = new ol.Feature({
+          type: 'runnericon',
+          geometry: new ol.geom.Point(ol.proj.fromLonLat([4.862983, 53.173950]))
+      });
+
+      // Create the vector source to hold the runner icon.
+      var vectorSource = new ol.source.Vector({
+          features: [runnerMarker]
+      });
+
+      // Create a vector layer to contain the runner marker icon.
+      var runnerLayer = new ol.layer.Vector({
+          source: vectorSource,
+          style: function(feature) {
+              return iconStyles[feature.get('type')];
+          }
+      });
+
+      /*
+      Create the map with the different layers.
+      */
+      var map = new ol.Map({
+        layers: [raster, GPXTrack, checkPointLayer, runnerLayer],
+        target: document.getElementById('map'),
+        controls: ol.control.defaults().extend([
+          new ol.control.FullScreen()]),
+        view: new ol.View({
+            // Replace this by logic that actually calculates the center of the course that is being displayed.
+          center: ol.proj.fromLonLat([4.811233, 53.079659]),
+          zoom: 11
+        })
+      });
+
+      //build an array of coordinates along the course...
+      var trackPoints = [
+          new ol.geom.Point(ol.proj.fromLonLat([4.8628744, 53.1737631])),
+          new ol.geom.Point(ol.proj.fromLonLat([4.87502, 53.165905])),
+          new ol.geom.Point(ol.proj.fromLonLat([4.8773391, 53.1567935])),
+          new ol.geom.Point(ol.proj.fromLonLat([4.8815517, 53.1545633])),
+          new ol.geom.Point(ol.proj.fromLonLat([4.8991883, 53.1439667])),
+          new ol.geom.Point(ol.proj.fromLonLat([4.898765, 53.1142483])),
+          new ol.geom.Point(ol.proj.fromLonLat([4.8980833, 53.09992])),
+          new ol.geom.Point(ol.proj.fromLonLat([4.8815589, 53.0718594])),
+          new ol.geom.Point(ol.proj.fromLonLat([4.8786183, 53.0684883])),
+          new ol.geom.Point(ol.proj.fromLonLat([4.8734, 53.0656])),
+          new ol.geom.Point(ol.proj.fromLonLat([4.8638917, 53.049945])),
+          new ol.geom.Point(ol.proj.fromLonLat([4.8491796, 53.0405534])),
+          new ol.geom.Point(ol.proj.fromLonLat([4.8471264, 53.0555924])),
+          new ol.geom.Point(ol.proj.fromLonLat([4.8253303, 53.0720147])),
+          new ol.geom.Point(ol.proj.fromLonLat([4.804576, 53.0543145])),
+          new ol.geom.Point(ol.proj.fromLonLat([4.8246983, 53.030375])),
+          new ol.geom.Point(ol.proj.fromLonLat([4.7721616, 53.0088683])),
+          new ol.geom.Point(ol.proj.fromLonLat([4.73617, 53.04092])),
+          new ol.geom.Point(ol.proj.fromLonLat([4.7330367, 53.045125])),
+          new ol.geom.Point(ol.proj.fromLonLat([4.733835, 53.0484733])),
+          new ol.geom.Point(ol.proj.fromLonLat([4.741825, 53.0535583])),
+          new ol.geom.Point(ol.proj.fromLonLat([4.7451784, 53.055455])),
+          new ol.geom.Point(ol.proj.fromLonLat([4.74517, 53.0555083])),
+          new ol.geom.Point(ol.proj.fromLonLat([4.74504, 53.0558766])),
+          new ol.geom.Point(ol.proj.fromLonLat([4.74505, 53.0559616])),
+          new ol.geom.Point(ol.proj.fromLonLat([4.7462567, 53.0585184])),
+          new ol.geom.Point(ol.proj.fromLonLat([4.7532666, 53.0684367])),
+          new ol.geom.Point(ol.proj.fromLonLat([4.7524717, 53.0722883])),
+          new ol.geom.Point(ol.proj.fromLonLat([4.75313, 53.0866167])),
+          new ol.geom.Point(ol.proj.fromLonLat([4.7587133, 53.0970617])),
+          new ol.geom.Point(ol.proj.fromLonLat([4.7599467, 53.1078933])),
+          new ol.geom.Point(ol.proj.fromLonLat([4.792225, 53.1360516])),
+          new ol.geom.Point(ol.proj.fromLonLat([4.8139983, 53.13131])),
+          new ol.geom.Point(ol.proj.fromLonLat([4.840855, 53.1524984])),
+          new ol.geom.Point(ol.proj.fromLonLat([4.8435417, 53.163325])),
+          new ol.geom.Point(ol.proj.fromLonLat([4.84414, 53.1683967])),
+          new ol.geom.Point(ol.proj.fromLonLat([4.8516883, 53.17406])),
+          new ol.geom.Point(ol.proj.fromLonLat([4.8577433, 53.1778883])),
+          new ol.geom.Point(ol.proj.fromLonLat([4.860165, 53.1755617])),
+          new ol.geom.Point(ol.proj.fromLonLat([4.8634533, 53.1745])),
+          new ol.geom.Point(ol.proj.fromLonLat([4.8629232, 53.1737411]))];
+
+      var trackCounter = 0;
+      /*
+      Set the tracker position every 90 seconds.
+      */
+      var refreshTimer = window.setInterval(refreshInterval, 1000);
+        
+      /*
+      Called on every refresh interval.
+      */
+      function refreshInterval(){
+
+          if(trackPoints[trackCounter] != null) {
+              vectorSource.clear();
+
+              runnerMarker.setGeometry(trackPoints[trackCounter]);
+
+              vectorSource.addFeature(runnerMarker);
+
+              trackCounter++;
+          }
+      }
+
+      var element = document.getElementById('popup');
+
+      var popup = new ol.Overlay({
+          element: element,
+          positioning: 'bottom-center',
+          stopEvent: false,
+          offset: [0, -50]
+      });
+      map.addOverlay(popup);
+
+      // display popup on click
+      map.on('click', function(evt) {
+          var feature = map.forEachFeatureAtPixel(evt.pixel,
+              function(feature) {
+                  return feature;
+              });
+
+          if (feature) {
+              var coordinates = feature.getGeometry().getCoordinates();
+              popup.setPosition(coordinates);
+              $(element).popover({
+                  'container': 'body',
+                  'placement': 'top',
+                  'max-width': '100%',
+                  'html': true,
+                  'title' : feature.get('name'),
+                  'content': feature.get('description')
+              });
+              $(element).popover('show');
+          } else {
+              $(element).popover('destroy');
+          }
+      });
+
+      // change mouse cursor when over marker
+      map.on('pointermove', function(e) {
+          if (e.dragging) {
+              $(element).popover('destroy');
+              return;
+          }
+          var pixel = map.getEventPixel(e.originalEvent);
+          var hit = map.hasFeatureAtPixel(pixel);
+          map.getTarget().style.cursor = hit ? 'pointer' : '';
+      });
+
+
+    </script>
+  </body>
+</html>
