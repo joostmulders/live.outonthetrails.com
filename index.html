@@ -110,11 +110,9 @@
         /*
         Load the checkpoints and start finish location.
         
-        TODO: Find a way to load checkpoints of multiple styles from a file !!!
-        
         TODO: Better checkpoint icon.    
         
-        TODO: Better way to load multiple check points.
+        TODO: Add error handling to reading the checkpoints from the file.
 
         */
 
@@ -136,81 +134,32 @@
                     var description = $(this).find('description').text();
                     var distance = $(this).find('distance').text();
                     var longtitude = $(this).find('lon').text();
-                    var lattitude = $(this).find('lat').text();
+                    var latitude = $(this).find('lat').text();
                     var type = $(this).find('type').text();
 
-                    addMarker(name, description, distance, longtitude, lattitude, type);
+                    addMarker(name, description, distance, longtitude, latitude, type);
                 });
             }
         });
       });
 
 
-      function addMarker(name, description, distance, longtitude, lattitude, type){
+      function addMarker(name, description, distance, longtitude, latitude, type){
 
+          var icontype = '';
+
+          if(type === 'checkpoint') icontype = 'checkpointicon';
+          else if(type === 'startfinish') icontype = 'startfinishicon';
 
           checkpointSource.addFeature(
               new ol.Feature({
                 name: name,
                 description: description + '<br>' + distance,
-                type: 'checkpointicon',
-
-                geometry: new ol.geom.Point(ol.proj.fromLonLat([4.849000, 53.041833]))
-
+                type: icontype,
+                geometry: new ol.geom.Point(ol.proj.fromLonLat([+(longtitude), +(latitude)]))
               }));
 
       }
-
-/*
-Commented this because it is being replaced by logic that reads the markers from the xml file.
-      // Add the checkpoints to the source for the vector layer.
-      checkpointSource.addFeature(
-          new ol.Feature({
-              name: 'Checkpoint 1',
-              description: 'Oudeschild <br> 18.7 km',
-              type: 'checkpointicon',
-              geometry: new ol.geom.Point(ol.proj.fromLonLat([4.849000, 53.041833]))
-          }));
-
-      checkpointSource.addFeature(
-          new ol.Feature({
-              name: 'CP 2',
-              description: '28 km',
-              type: 'checkpointicon',
-              geometry: new ol.geom.Point(ol.proj.fromLonLat([4.814050, 53.040650]))
-      }));
-
-      checkpointSource.addFeature(
-          new ol.Feature({
-              name: 'CP 3',
-              description: '40 km',
-              type: 'checkpointicon',
-              geometry: new ol.geom.Point(ol.proj.fromLonLat([4.733300, 53.042967]))
-          }));
-
-      checkpointSource.addFeature(
-          new ol.Feature({
-              name: 'CP 4',
-              description: '50 km',
-              type: 'checkpointicon',
-              geometry: new ol.geom.Point(ol.proj.fromLonLat([4.756400, 53.102017]))
-          }));
-
-      checkpointSource.addFeature(
-          new ol.Feature({
-              name: 'CP 5',
-              description: '57 km',
-              type: 'checkpointicon',
-              geometry: new ol.geom.Point(ol.proj.fromLonLat([4.817017, 53.130917]))
-          }));
-
-      checkpointSource.addFeature(
-          new ol.Feature({
-              name: 'Start & Finish',
-              type: 'startfinishicon',
-              geometry: new ol.geom.Point(ol.proj.fromLonLat([4.862983, 53.173950]))
-          }));
-        */
 
       // Create the vector layer with all the check point and start / finish markers.
       var checkPointLayer = new ol.layer.Vector({
