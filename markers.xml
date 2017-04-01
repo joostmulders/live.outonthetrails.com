@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+    <markers>
+        <marker>
+            <name>Checkpoint 1</name>
+            <description>Oudeschild</description>
+            <distance>18.7 km</distance>
+            <lon>4.849000</lon>
+            <lat>53.041833</lat>
+            <type>checkpoint</type>
+        </marker>
+
+        <marker>
+            <name>Checkpoint 2</name>
+            <description>Begraafplaats Hoge Berg</description>
+            <distance>27.8 km</distance>
+            <lon>4.814050</lon>
+            <lat>53.040650</lat>
+            <type>checkpoint</type>
+        </marker>
+
+        <marker>
+            <name>Checkpoint 3</name>
+            <description>Den Hoorn</description>
+            <distance>41.2 km</distance>
+            <lon>4.733300</lon>
+            <lat>53.042967</lat>
+            <type>checkpoint</type>
+        </marker>
+
+        <marker>
+            <name>Checkpoint 4</name>
+            <description>De Koog</description>
+            <distance>51.6 km</distance>
+            <lon>4.756400</lon>
+            <lat>53.102017</lat>
+            <type>checkpoint</type>
+        </marker>
+
+        <marker>
+            <name>Checkpoint 5</name>
+            <description>De Slufter</description>
+            <distance>58.4 km</distance>
+            <lon>4.817017</lon>
+            <lat>53.130917</lat>
+            <type>checkpoint</type>
+        </marker>
+
+        <marker>
+            <name>Start / Finish</name>
+            <description>Bungalowpark Schelpenoord</description>
+            <distance>0 - 65.3 km</distance>
+            <lon>4.862983</lon>
+            <lat>53.173950</lat>
+            <type>startfinish</type>
+        </marker>
+    </markers>
+
