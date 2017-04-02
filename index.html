@@ -44,18 +44,18 @@
         'Point': new ol.style.Style({
           image: new ol.style.Circle({
             fill: new ol.style.Fill({
-              color: 'rgba(0,0,255,0.4)'
+              color: 'rgba(0,126,118,0.4)'
             }),
             radius: 3,
             stroke: new ol.style.Stroke({
-              color: '#00f',
+              color: '#007e76',
               width: 3
             })
           })
         }),
         'LineString': new ol.style.Style({
           stroke: new ol.style.Stroke({
-            color: '#00f',
+            color: '#007e76',
             width: 3
           })
         }),
@@ -81,7 +81,7 @@
               image: new ol.style.Icon({
                   anchor: [0.5, 1],
                   src: './images/startfinish.png',
-                  scale: 0.15
+                  scale: 0.3
               })
           }),
 
@@ -150,6 +150,7 @@
 
           if(type === 'checkpoint') icontype = 'checkpointicon';
           else if(type === 'startfinish') icontype = 'startfinishicon';
+          else icontype = 'checkpointicon';
 
           checkpointSource.addFeature(
               new ol.Feature({
@@ -248,6 +249,7 @@
           new ol.geom.Point(ol.proj.fromLonLat([4.8629232, 53.1737411]))];
 
       var trackCounter = 0;
+
       /*
       Set the tracker position every 90 seconds.
       */
@@ -267,6 +269,13 @@
 
               trackCounter++;
           }
+
+          /////
+
+          // Add code to retrieve the current position of the tracker and set the marker position to these
+          // coordinates.
+
+          //////
       }
 
       var element = document.getElementById('popup');
@@ -279,8 +288,15 @@
       });
       map.addOverlay(popup);
 
-      // display popup on click
+      //////
+
+      // TODO: Fix the bug that causes the same pop-up to apear when clicking directly on another marker.
+
+      //////
+
+      // Display a popup with the marker information when it is clicked.
       map.on('click', function(evt) {
+
           var feature = map.forEachFeatureAtPixel(evt.pixel,
               function(feature) {
                   return feature;
@@ -303,7 +319,7 @@
           }
       });
 
-      // change mouse cursor when over marker
+      // Change mouse cursor when over marker
       map.on('pointermove', function(e) {
           if (e.dragging) {
               $(element).popover('destroy');
@@ -313,7 +329,6 @@
           var hit = map.hasFeatureAtPixel(pixel);
           map.getTarget().style.cursor = hit ? 'pointer' : '';
       });
-
 
     </script>
   </body>
