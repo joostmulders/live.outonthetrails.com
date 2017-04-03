@@ -273,34 +273,35 @@
 
       //////
 
-      // TODO: Fix the bug that causes the same pop-up to apear when clicking directly on another marker.
+      // TODO: Fix the bug that causes the gps course to be clickable.
 
       //////
 
-      // Display a popup with the marker information when it is clicked.
-      map.on('click', function(evt) {
 
+      //display popup on click
+      map.on('click', function(evt){
           var feature = map.forEachFeatureAtPixel(evt.pixel,
-              function(feature) {
+              function(feature){
                   return feature;
-              });
+              }
+          );
 
-          if (feature) {
-              var coordinates = feature.getGeometry().getCoordinates();
-              popup.setPosition(coordinates);
-              $(element).popover({
-                  'container': 'body',
-                  'placement': 'top',
-                  'max-width': '100%',
-                  'html': true,
-                  'title' : feature.get('name'),
-                  'content': feature.get('description')
-              });
+          if (feature){
+              popup.setPosition(feature.getGeometry().getCoordinates());
+
+              $(element).attr('data-placement', 'auto top');
+              $(element).attr('data-html', true);
+              $(element).attr('data-container', 'body');
+              $(element).attr('max-width', '100%');
+              $(element).attr('data-original-title', feature.get('name'));
+              $(element).attr('data-content', feature.get('description'));
               $(element).popover('show');
-          } else {
+          }
+          else{
               $(element).popover('destroy');
           }
       });
+
 
       // Change mouse cursor when over marker
       map.on('pointermove', function(e) {
@@ -308,6 +309,7 @@
               $(element).popover('destroy');
               return;
           }
+
           var pixel = map.getEventPixel(e.originalEvent);
           var hit = map.hasFeatureAtPixel(pixel);
           map.getTarget().style.cursor = hit ? 'pointer' : '';
