@@ -14,8 +14,11 @@
     
   <body>
   <div id="map" style="width: 100%; height: 100%; position:fixed">
+    <div id="countdowntimer"><h4>Countdown</h4></div>
+    </div>
   <div id="popup">
-  <div id="info">&nbsp;
+  <div id="info">
+
         
     <script>
       var raster = new ol.layer.Tile({
@@ -234,16 +237,49 @@
       var trackCounter = 0;
 
       /*
+      Create the timer countdown.
+      */
+      // Timer label
+      var countdownTimer = new ol.Overlay({
+          element: document.getElementById('countdowntimer')
+      });
+      map.addOverlay(countdownTimer);
+      countdownTimer.setPosition();
+
+      var countdownCounter = 5;
+
+      var timer = window.setInterval(countdownTimerInterval, 1000);
+
+      function countdownTimerInterval(){
+          var element = countdownTimer.getElement();
+          var coord = [4.811233, 53.079659];
+
+          if (countdownCounter === 0)
+            countdownCounter= 5;
+
+          map.removeOverlay(countdownTimer);
+
+          element.innerHTML = 'Next refresh in: ' + countdownCounter;
+          countdownCounter--;
+          countdownTimer.setPosition(coord);
+
+          map.addOverlay(countdownTimer);
+
+
+      }
+
+
+      /*
       Set the tracker position every 90 seconds.
       */
-      var refreshTimer = window.setInterval(refreshInterval, 1000);
+      var refreshTimer = window.setInterval(refreshInterval, 5000);
         
       /*
       Called on every refresh interval.
       */
       function refreshInterval(){
 
-          if(trackPoints[trackCounter] != null) {
+          if(trackPoints[trackCounter] !== null) {
               vectorSource.clear();
 
               runnerMarker.setGeometry(trackPoints[trackCounter]);
