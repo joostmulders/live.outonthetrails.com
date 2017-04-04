@@ -10,12 +10,19 @@
     <link rel="stylesheet" href="./bootstrap/css/bootstrap.min.css">
     <script src="./bootstrap/js/bootstrap.js"></script>
 
+    <style>
+      #countdowntimer {
+        position: absolute;
+        top: .5em;
+        left: 50px;
+        font-weight: bold;
+      }
+    </style>
   </head>
     
   <body>
+  <div id='countdowntimer'></div>
   <div id="map" style="width: 100%; height: 100%; position:fixed">
-    <div id="countdowntimer"><h4>Countdown</h4></div>
-    </div>
   <div id="popup">
   <div id="info">
 
@@ -74,8 +81,8 @@
           'runnericon': new ol.style.Style({
               image: new ol.style.Icon({
                   anchor: [0.5, 1],
-                  src: './images/runner.png',
-                  scale: 0.7
+                  src: './images/singlerunner.png',
+                  scale: 0.3
               })
           })
       };
@@ -95,8 +102,6 @@
         
         /*
         Load the checkpoints and start finish location.
-        
-        TODO: Better checkpoint icon.    
         
         TODO: Add error handling to reading the checkpoints from the file.
 
@@ -236,43 +241,32 @@
 
       var trackCounter = 0;
 
+      var refreshrate = 5000;
+
       /*
       Create the timer countdown.
       */
-      // Timer label
-      var countdownTimer = new ol.Overlay({
-          element: document.getElementById('countdowntimer')
-      });
-      map.addOverlay(countdownTimer);
-      countdownTimer.setPosition();
-
-      var countdownCounter = 5;
-
+      var countdownCounter = refreshrate / 1000;
       var timer = window.setInterval(countdownTimerInterval, 1000);
 
+      $('#countdowntimer').appendTo($('.ol-overlaycontainer'));
+
       function countdownTimerInterval(){
-          var element = countdownTimer.getElement();
-          var coord = [4.811233, 53.079659];
+
+          countdownCounter--;
+
+          var out = "Next refresh in: " + countdownCounter + 's';
+          $('#countdowntimer').text(out);
 
           if (countdownCounter === 0)
-            countdownCounter= 5;
-
-          map.removeOverlay(countdownTimer);
-
-          element.innerHTML = 'Next refresh in: ' + countdownCounter;
-          countdownCounter--;
-          countdownTimer.setPosition(coord);
-
-          map.addOverlay(countdownTimer);
-
+              countdownCounter= refreshrate / 1000;
 
       }
 
-
       /*
-      Set the tracker position every 90 seconds.
+      Set the tracker position every x seconds, defined by the refreshinterval.
       */
-      var refreshTimer = window.setInterval(refreshInterval, 5000);
+      var refreshTimer = window.setInterval(refreshInterval, refreshrate);
         
       /*
       Called on every refresh interval.
