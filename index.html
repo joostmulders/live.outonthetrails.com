@@ -28,6 +28,11 @@
 
         
     <script>
+      // Constants
+      var refreshrate = 5000; // The refresh rate at which the runner position is updated.
+      var gpxFilePath = './course/course.gpx';
+      var markerFilePath = './course/markers.xml';
+
       var raster = new ol.layer.Tile({
         source: new ol.source.OSM()
       });
@@ -92,7 +97,7 @@
        */
       var GPXTrack = new ol.layer.Vector({
           source: new ol.source.Vector({
-              url: './course/course.gpx',
+              url: gpxFilePath,
               format: new ol.format.GPX()
           }),
           style: function(feature) {
@@ -106,17 +111,15 @@
         TODO: Add error handling to reading the checkpoints from the file.
 
         */
-
       var checkpointSource = new ol.source.Vector({
           //create empty vector
       });
-
 
       $(document).ready(function(){
           // Read the course markers from the XML file.
         $.ajax({
             type: "GET",
-            url: "./course/markers.xml",
+            url: markerFilePath,
             dataType: "xml",
             success: function(xml) {
 
@@ -133,7 +136,6 @@
             }
         });
       });
-
 
       function addMarker(name, description, distance, longtitude, latitude, type){
 
@@ -189,10 +191,15 @@
         controls: ol.control.defaults().extend([
           new ol.control.FullScreen()]),
         view: new ol.View({
-            // Replace this by logic that actually calculates the center of the course that is being displayed.
-          center: ol.proj.fromLonLat([4.811233, 53.079659]),
-          zoom: 11
+            center: [0, 0],
+            zoom: 11
         })
+      });
+
+      // Zoom the map to fit the GPX track in the view.
+      GPXTrack.getSource().on("change", function(evt) {
+          extent = GPXTrack.getSource().getExtent();
+          map.getView().fit(extent, map.getSize());
       });
 
       //build an array of coordinates along the course...
@@ -241,10 +248,8 @@
 
       var trackCounter = 0;
 
-      var refreshrate = 5000;
-
       /*
-      Create the timer countdown.
+      Create the refresh timer countdown.
       */
       var countdownCounter = refreshrate / 1000;
       var timer = window.setInterval(countdownTimerInterval, 1000);
@@ -301,12 +306,12 @@
       });
       map.addOverlay(popup);
 
+
       //////
 
       // TODO: Fix the bug that causes the gps course to be clickable.
 
       //////
-
 
       //display popup on click
       map.on('click', function(evt){
