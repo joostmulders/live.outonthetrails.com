@@ -107,10 +107,9 @@
         
         /*
         Load the checkpoints and start finish location.
-        
         TODO: Add error handling to reading the checkpoints from the file.
-
         */
+
       var checkpointSource = new ol.source.Vector({
           //create empty vector
       });
@@ -202,6 +201,9 @@
           map.getView().fit(extent, map.getSize());
       });
 
+      // Set the initial position of the runner icon to the current location of the tracker.
+      setRunnerPosition();
+
       //build an array of coordinates along the course...
       var trackPoints = [
           new ol.geom.Point(ol.proj.fromLonLat([4.8628744, 53.1737631])),
@@ -271,29 +273,43 @@
       /*
       Set the tracker position every x seconds, defined by the refreshinterval.
       */
-      var refreshTimer = window.setInterval(refreshInterval, refreshrate);
+      var refreshTimer = window.setInterval(setRunnerPosition, refreshrate);
         
       /*
       Called on every refresh interval.
       */
-      function refreshInterval(){
+      function setRunnerPosition(){
 
+          $.ajax({
+              url: './trackerinfo.php',
+              success: function (response) {
+                  // Process the response to retrieve the current location of the tracker and the timestamp of this position.
+                  var responseObj = JSON.parse(response.toString());
+
+                  if (responseObj === null)
+                      alert('Error processing the tracker data.');
+
+                  var currentLat = +(responseObj.lat);
+                  var currentLon = +(responseObj.lng);
+
+                  vectorSource.clear();
+
+                  runnerMarker.setGeometry(new ol.geom.Point(ol.proj.fromLonLat([currentLon, currentLat])));
+
+                  vectorSource.addFeature(runnerMarker);
+
+              },
+              error: function (response) {
+                  alert('[Error retrieving GPS tracker data] - ' + response.toString());
+              }
+          });
+
+          /*
           if(trackPoints[trackCounter] !== null) {
-              vectorSource.clear();
-
               runnerMarker.setGeometry(trackPoints[trackCounter]);
-
-              vectorSource.addFeature(runnerMarker);
-
               trackCounter++;
-          }
+          }*/
 
-          /////
-
-          // Add code to retrieve the current position of the tracker and set the marker position to these
-          // coordinates.
-
-          //////
       }
 
       var element = document.getElementById('popup');
