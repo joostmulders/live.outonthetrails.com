@@ -29,7 +29,7 @@
         
     <script>
       // Constants
-      var refreshrate = 5000; // The refresh rate at which the runner position is updated.
+      var refreshrate = 90000; // The refresh rate at which the runner position is updated.
       var gpxFilePath = './course/course.gpx';
       var markerFilePath = './course/markers.xml';
 
@@ -204,52 +204,6 @@
       // Set the initial position of the runner icon to the current location of the tracker.
       setRunnerPosition();
 
-      //build an array of coordinates along the course...
-      var trackPoints = [
-          new ol.geom.Point(ol.proj.fromLonLat([4.8628744, 53.1737631])),
-          new ol.geom.Point(ol.proj.fromLonLat([4.87502, 53.165905])),
-          new ol.geom.Point(ol.proj.fromLonLat([4.8773391, 53.1567935])),
-          new ol.geom.Point(ol.proj.fromLonLat([4.8815517, 53.1545633])),
-          new ol.geom.Point(ol.proj.fromLonLat([4.8991883, 53.1439667])),
-          new ol.geom.Point(ol.proj.fromLonLat([4.898765, 53.1142483])),
-          new ol.geom.Point(ol.proj.fromLonLat([4.8980833, 53.09992])),
-          new ol.geom.Point(ol.proj.fromLonLat([4.8815589, 53.0718594])),
-          new ol.geom.Point(ol.proj.fromLonLat([4.8786183, 53.0684883])),
-          new ol.geom.Point(ol.proj.fromLonLat([4.8734, 53.0656])),
-          new ol.geom.Point(ol.proj.fromLonLat([4.8638917, 53.049945])),
-          new ol.geom.Point(ol.proj.fromLonLat([4.8491796, 53.0405534])),
-          new ol.geom.Point(ol.proj.fromLonLat([4.8471264, 53.0555924])),
-          new ol.geom.Point(ol.proj.fromLonLat([4.8253303, 53.0720147])),
-          new ol.geom.Point(ol.proj.fromLonLat([4.804576, 53.0543145])),
-          new ol.geom.Point(ol.proj.fromLonLat([4.8246983, 53.030375])),
-          new ol.geom.Point(ol.proj.fromLonLat([4.7721616, 53.0088683])),
-          new ol.geom.Point(ol.proj.fromLonLat([4.73617, 53.04092])),
-          new ol.geom.Point(ol.proj.fromLonLat([4.7330367, 53.045125])),
-          new ol.geom.Point(ol.proj.fromLonLat([4.733835, 53.0484733])),
-          new ol.geom.Point(ol.proj.fromLonLat([4.741825, 53.0535583])),
-          new ol.geom.Point(ol.proj.fromLonLat([4.7451784, 53.055455])),
-          new ol.geom.Point(ol.proj.fromLonLat([4.74517, 53.0555083])),
-          new ol.geom.Point(ol.proj.fromLonLat([4.74504, 53.0558766])),
-          new ol.geom.Point(ol.proj.fromLonLat([4.74505, 53.0559616])),
-          new ol.geom.Point(ol.proj.fromLonLat([4.7462567, 53.0585184])),
-          new ol.geom.Point(ol.proj.fromLonLat([4.7532666, 53.0684367])),
-          new ol.geom.Point(ol.proj.fromLonLat([4.7524717, 53.0722883])),
-          new ol.geom.Point(ol.proj.fromLonLat([4.75313, 53.0866167])),
-          new ol.geom.Point(ol.proj.fromLonLat([4.7587133, 53.0970617])),
-          new ol.geom.Point(ol.proj.fromLonLat([4.7599467, 53.1078933])),
-          new ol.geom.Point(ol.proj.fromLonLat([4.792225, 53.1360516])),
-          new ol.geom.Point(ol.proj.fromLonLat([4.8139983, 53.13131])),
-          new ol.geom.Point(ol.proj.fromLonLat([4.840855, 53.1524984])),
-          new ol.geom.Point(ol.proj.fromLonLat([4.8435417, 53.163325])),
-          new ol.geom.Point(ol.proj.fromLonLat([4.84414, 53.1683967])),
-          new ol.geom.Point(ol.proj.fromLonLat([4.8516883, 53.17406])),
-          new ol.geom.Point(ol.proj.fromLonLat([4.8577433, 53.1778883])),
-          new ol.geom.Point(ol.proj.fromLonLat([4.860165, 53.1755617])),
-          new ol.geom.Point(ol.proj.fromLonLat([4.8634533, 53.1745])),
-          new ol.geom.Point(ol.proj.fromLonLat([4.8629232, 53.1737411]))];
-
-      var trackCounter = 0;
-
       /*
       Create the refresh timer countdown.
       */
@@ -286,30 +240,27 @@
                   // Process the response to retrieve the current location of the tracker and the timestamp of this position.
                   var responseObj = JSON.parse(response.toString());
 
-                  if (responseObj === null)
-                      alert('Error processing the tracker data.');
+                  if (responseObj !== null) {
 
-                  var currentLat = +(responseObj.lat);
-                  var currentLon = +(responseObj.lng);
+                      var currentLat = +(responseObj.lat);
+                      var currentLon = +(responseObj.lng);
 
-                  vectorSource.clear();
+                      vectorSource.clear();
 
-                  runnerMarker.setGeometry(new ol.geom.Point(ol.proj.fromLonLat([currentLon, currentLat])));
+                      runnerMarker.setGeometry(new ol.geom.Point(ol.proj.fromLonLat([currentLon, currentLat])));
 
-                  vectorSource.addFeature(runnerMarker);
-
+                      vectorSource.addFeature(runnerMarker);
+                  }
+                  else {
+                      // process the error.
+                  }
               },
               error: function (response) {
-                  alert('[Error retrieving GPS tracker data] - ' + response.toString());
+                  // alert('[Error retrieving GPS tracker data] - ' + response.toString());
+
+                  // process the error.
               }
           });
-
-          /*
-          if(trackPoints[trackCounter] !== null) {
-              runnerMarker.setGeometry(trackPoints[trackCounter]);
-              trackCounter++;
-          }*/
-
       }
 
       var element = document.getElementById('popup');
