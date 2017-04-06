@@ -29,7 +29,7 @@
         
     <script>
       // Constants
-      var refreshrate = 90000; // The refresh rate at which the runner position is updated.
+      var refreshrate = 30000; // The refresh rate at which the runner position is updated.
       var gpxFilePath = './course/course.gpx';
       var markerFilePath = './course/markers.xml';
 
@@ -165,7 +165,7 @@
       // Define the runner icon with the initial start location on the course.
       var runnerMarker = new ol.Feature({
           type: 'runnericon',
-          geometry: new ol.geom.Point(ol.proj.fromLonLat([4.862983, 53.173950]))
+          geometry: new ol.geom.Point(ol.proj.fromLonLat([0,0]))
       });
 
       // Create the vector source to hold the runner icon.
@@ -187,8 +187,7 @@
       var map = new ol.Map({
         layers: [raster, GPXTrack, checkPointLayer, runnerLayer],
         target: document.getElementById('map'),
-        controls: ol.control.defaults().extend([
-          new ol.control.FullScreen()]),
+
         view: new ol.View({
             center: [0, 0],
             zoom: 11
