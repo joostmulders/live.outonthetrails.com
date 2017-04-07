@@ -18,13 +18,26 @@
         font-weight: bold;
         font-size: 18px;
       }
+
+      #zoomtorunnerbutton {
+        position: absolute;
+        top: .5em;
+        right: 10px;
+        background-color: #7090b2;
+        border: none;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 16px;
+      }
     </style>
   </head>
     
   <body>
   <div id='countdowntimer'></div>
+  <div id='zoomtorunnerbutton'><button id='btnzoomtorunner' onclick='onZoomToRunner()'>Locate Runner</button></div>
   <div id="map" style="width: 100%; height: 100%; position:fixed">
-  <div id="popup">
+  <div id="popup">'
   <div id="info">
 
         
@@ -202,6 +215,8 @@
           map.getView().fit(extent, map.getSize());
       });
 
+      $('#zoomtorunnerbutton').appendTo($('.ol-overlaycontainer'));
+
       // Buffer the tracker info from the tracking API.
       var runnerInitialized = false;
       var currentLongtitude = 0;
@@ -305,6 +320,53 @@
           vectorSource.addFeature(runnerMarker);
       }
 
+      /*
+      Get's fired when the user clicks the zoom to runner button and moves the map to the runner while zooming in.
+      */
+      function onZoomToRunner() {
+          if((currentLattitude !== 0) && (currentLongtitude !== 0)) {
+              //flyTo(ol.proj.fromLonLat([currentLongtitude, currentLattitude]),  function() {
+
+              map.getView().animate({
+                  center: ol.proj.fromLonLat([currentLongtitude, currentLattitude]),
+                  duration: 2000,
+                  zoom: 16
+              });
+
+
+          }
+      }
+
+      /*
+      Create a fly effect to go to the specified location.
+      */
+      function flyTo(location, done) {
+          var duration = 2000;
+          var zoom = map.getView().getZoom();
+          var parts = 2;
+          var called = false;
+          function callback(complete) {
+              --parts;
+              if (called) {
+                  return;
+              }
+              if (parts === 0 || !complete) {
+                  called = true;
+                  done(complete);
+              }
+          }
+          map.getView().animate({
+              center: location,
+              duration: duration
+          }, callback);
+          map.getView().animate({
+              zoom: zoom - 2,
+              duration: duration / 2
+          }, {
+              zoom: zoom + 5,
+              duration: duration / 2
+          }, callback);
+      }
 
       /*
       Handle the pop-ups of the markers on the course.
