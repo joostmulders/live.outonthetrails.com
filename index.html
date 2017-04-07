@@ -30,9 +30,10 @@
         
     <script>
       // Constants
-      var refreshrate = 30000; // The refresh rate at which the runner position is updated.
+      var refreshrate = 90000; // The refresh rate at which the runner position is updated.
       var gpxFilePath = './course/course.gpx';
       var markerFilePath = './course/markers.xml';
+
 
       var raster = new ol.layer.Tile({
         source: new ol.source.OSM()
@@ -201,11 +202,43 @@
           map.getView().fit(extent, map.getSize());
       });
 
+      // Buffer the tracker info from the tracking API.
+      var runnerInitialized = false;
+      var currentLongtitude = 0;
+      var currentLattitude = 0;
+
+      var batteryPercentage = 'unknown';
+      var runnerName = 'unknown';
+      var lastUpdate = 'unknown';
+      var currentSpeed = 'unknown';
+      var completedDistance = 'unknown';
+
+      var getDataTimer = window.setInterval(getTrackerData, 30000);
+
       // Set the initial position of the runner icon to the current location of the tracker.
-      setRunnerPosition();
+      getTrackerData();
+
+      // Define the event that get's triggered when the tracker info is updated.
+      function OnTrackerInfoUpdated(state) {
+          var evt = $.Event('TrackerInfoUpdated');
+          evt.state = state;
+
+          $(window).trigger(evt);
+      }
 
       /*
-      Create the refresh timer countdown.
+      Event handler called when the tracker info has been updated.
+      */
+      $(window).on('TrackerInfoUpdated', function (e) {
+
+          if(!runnerInitialized) {
+              setRunnerPosition();
+              runnerInitialized = true;
+          }
+      });
+
+      /*
+      Create and handle the refresh timer countdown.
       */
       var countdownCounter = refreshrate / 1000;
       var timer = window.setInterval(countdownTimerInterval, 1000);
@@ -216,23 +249,24 @@
 
           countdownCounter--;
 
+          // Display the updated countdown timer.
           var out = "Next refresh in: " + countdownCounter + 's';
           $('#countdowntimer').text(out);
 
-          if (countdownCounter === 0)
-              countdownCounter= refreshrate / 1000;
+          if (countdownCounter === 0) {
+
+              // Update the runner position and info from the buffered data when the refresh timer has elapsed.
+              setRunnerPosition();
+
+              countdownCounter = refreshrate / 1000;
+          }
 
       }
 
       /*
-      Set the tracker position every x seconds, defined by the refreshinterval.
-      */
-      var refreshTimer = window.setInterval(setRunnerPosition, refreshrate);
-        
-      /*
-      Called on every refresh interval.
-      */
-      function setRunnerPosition(){
+      This function get's called by an interval timer and retrieves the current data of the tracker.
+       */
+      function getTrackerData(){
 
           $.ajax({
               url: './trackerinfo.php',
@@ -242,27 +276,39 @@
 
                   if (responseObj !== null) {
 
-                      var currentLat = +(responseObj.lat);
-                      var currentLon = +(responseObj.lng);
+                      currentLattitude = +(responseObj.lat);
+                      currentLongtitude = +(responseObj.lng);
 
-                      vectorSource.clear();
-
-                      runnerMarker.setGeometry(new ol.geom.Point(ol.proj.fromLonLat([currentLon, currentLat])));
-
-                      vectorSource.addFeature(runnerMarker);
+                      OnTrackerInfoUpdated(null);
                   }
                   else {
+
                       // process the error.
                   }
               },
               error: function (response) {
                   // alert('[Error retrieving GPS tracker data] - ' + response.toString());
-
                   // process the error.
               }
           });
       }
 
+      /*
+      Update the position of the runner on the map.
+      */
+      function setRunnerPosition(){
+
+          vectorSource.clear();
+
+          runnerMarker.setGeometry(new ol.geom.Point(ol.proj.fromLonLat([currentLongtitude, currentLattitude])));
+
+          vectorSource.addFeature(runnerMarker);
+      }
+
+
+      /*
+      Handle the pop-ups of the markers on the course.
+      */
       var element = document.getElementById('popup');
 
       var popup = new ol.Overlay({
@@ -273,14 +319,7 @@
       });
       map.addOverlay(popup);
 
-
-      //////
-
-      // TODO: Fix the bug that causes the gps course to be clickable.
-
-      //////
-
-      //display popup on click
+      // display popup on click
       map.on('click', function(evt){
           var feature = map.forEachFeatureAtPixel(evt.pixel,
               function(feature){
@@ -304,7 +343,6 @@
           }
       });
 
-
       // Change mouse cursor when over marker
       map.on('pointermove', function(e) {
           if (e.dragging) {
@@ -315,6 +353,7 @@
           var pixel = map.getEventPixel(e.originalEvent);
           var hit = map.hasFeatureAtPixel(pixel);
           map.getTarget().style.cursor = hit ? 'pointer' : '';
+
       });
 
     </script>
