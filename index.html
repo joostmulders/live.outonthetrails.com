@@ -28,6 +28,7 @@
         text-decoration: none;
         display: inline-block;
         font-size: 16px;
+        cursor: pointer;
       }
 
       #zoomoutbutton {
@@ -39,6 +40,19 @@
         text-decoration: none;
         display: inline-block;
         font-size: 16px;
+        cursor: pointer;
+      }
+
+      #infobutton {
+        position: absolute;
+        top: 102px;
+        right: 10px;
+        border: none;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 16px;
+        cursor: pointer;
       }
     </style>
   </head>
@@ -47,13 +61,15 @@
   <div id='countdowntimer'></div>
   <div id='zoomtorunnerbutton'><img src="./images/zoomtorunner.png" alt="Zoom to runner" onclick="onZoomToRunner()"
                                     onmouseover="this.src='./images/zoomtorunner_highlight.png'"
-                                    onmouseout="this.src='./images/zoomtorunner.png'"
-                                    style="cursor: pointer"></div>
+                                    onmouseout="this.src='./images/zoomtorunner.png'"></div>
 
   <div id='zoomoutbutton'><img src="./images/zoomout.png" alt="Test" onclick="onZoomOut()"
                                     onmouseover="this.src='./images/zoomout_highlight.png'"
-                                    onmouseout="this.src='./images/zoomout.png'"
-                                    style="cursor: pointer"></div>
+                                    onmouseout="this.src='./images/zoomout.png'"></div>
+
+  <div id='infobutton'><img src="./images/info.png" alt="Test" onclick="onInfo()"
+                               onmouseover="this.src='./images/info_highlight.png'"
+                               onmouseout="this.src='./images/info.png'"></div>
 
   <div id="map" style="width: 100%; height: 100%; position:fixed">
   <div id="popup">'
@@ -64,8 +80,14 @@
       // Constants
       var refreshrate = 90000; // The refresh rate at which the runner position is updated.
       var gpxFilePath = './course/course.gpx';
-      var markerFilePath = './course/markers.xml';
+      var eventInfoFilePath = './events/eventinfo.xml';
 
+      // Event information variables.
+      var eventTitle = '';
+      var eventDescription = '';
+      var eventStartDateTime = null;
+      var eventEndDateTime = null;
+      var eventDistance = "";
 
       var raster = new ol.layer.Tile({
         source: new ol.source.OSM()
@@ -148,14 +170,31 @@
           //create empty vector
       });
 
+      /*
+      Get's called when the page is loaded, used to initialize the configuration.
+      */
       $(document).ready(function(){
-          // Read the course markers from the XML file.
+          // Load the event configuration from the XML file.
         $.ajax({
             type: "GET",
-            url: markerFilePath,
+            url: eventInfoFilePath,
             dataType: "xml",
             success: function(xml) {
+                // Read the event info from the XML file.
+                try {
+                    eventTitle = $(xml).find('eventname').text();
+                    eventDescription = $(xml).find('eventdescription').text();
 
+                    eventStartDateTime = new Date($(xml).find('startdatetime').text());
+                    eventEndDateTime = new Date($(xml).find('enddatetime').text());
+
+                    eventDistance = $(xml).find('eventdistance').text();
+                }
+                catch(err) {
+
+                }
+
+                // Read the course markers from the XML file.
                 $(xml).find('marker').each(function(){
                     var name = $(this).find('name').text();
                     var description = $(this).find('description').text();
@@ -234,9 +273,12 @@
           map.getView().fit(extent, map.getSize());
       });
 
+      /*
+      Add the zoom to runner, zoom out and info buttons to the page.
+      */
       $('#zoomtorunnerbutton').appendTo($('.ol-overlaycontainer'));
-
       $('#zoomoutbutton').appendTo($('.ol-overlaycontainer'));
+      $('#infobutton').appendTo($('.ol-overlaycontainer'));
 
       // Buffer the tracker info from the tracking API.
       var runnerInitialized = false;
@@ -336,16 +378,19 @@
 
           vectorSource.clear();
 
-          runnerMarker.setGeometry(new ol.geom.Point(ol.proj.fromLonLat([currentLongtitude, currentLattitude])));
+          // Draw the current location of the runner if the current date and time is during the configured event.
+          if(isLocationDateTimeWithinEvent(new Date())) {
+              runnerMarker.setGeometry(new ol.geom.Point(ol.proj.fromLonLat([currentLongtitude, currentLattitude])));
 
-          vectorSource.addFeature(runnerMarker);
+              vectorSource.addFeature(runnerMarker);
+          }
       }
 
       /*
       Get's fired when the user clicks the zoom to runner button and moves the map to the runner while zooming in.
       */
       function onZoomToRunner() {
-          if((currentLattitude !== 0) && (currentLongtitude !== 0)) {
+          if((currentLattitude !== 0) && (currentLongtitude !== 0) && isLocationDateTimeWithinEvent()) {
 
               map.getView().animate({
                   center: ol.proj.fromLonLat([currentLongtitude, currentLattitude]),
@@ -361,6 +406,13 @@
       function onZoomOut() {
           extent = GPXTrack.getSource().getExtent();
           map.getView().fit(extent, map.getSize());
+      }
+
+      /*
+      Get's fired when the info button is clicked.
+      */
+      function onInfo() {
+          showEventInfoPopUp();
       }
 
       /*
@@ -402,6 +454,7 @@
 
       // Change mouse cursor when over marker
       map.on('pointermove', function(e) {
+
           if (e.dragging) {
               $(element).popover('destroy');
               return;
@@ -412,6 +465,58 @@
           map.getTarget().style.cursor = hit ? 'pointer' : '';
 
       });
+
+      // Displays a popup with the event info.
+      function showEventInfoPopUp() {
+
+          popup.setPosition(map.getCoordinateFromPixel([document.getElementById('infobutton').getBoundingClientRect().left,
+              (document.getElementById('infobutton').getBoundingClientRect().top + 80)]));
+
+          $(element).attr('data-placement', 'auto left');
+          $(element).attr('data-html', true);
+          $(element).attr('data-container', 'body');
+          $(element).attr('max-width', '100%');
+          $(element).attr('data-original-title', eventTitle);
+          $(element).attr('data-content', buildEventInfoText());
+          $(element).popover('show');
+      }
+
+      // Builds and returns a formatted text displaying the event information from the event xml file.
+      function buildEventInfoText() {
+
+          var eventInfoHTML = "";
+
+          if((eventStartDateTime !== null) && (eventEndDateTime !== null)) {
+              eventInfoHTML = "<b>Start:</b> " + eventStartDateTime.getDate() + '-' + (eventStartDateTime.getMonth() + 1) + '-' + eventStartDateTime.getFullYear() + "  " +
+                  eventStartDateTime.toLocaleTimeString();
+              eventInfoHTML += "<br>";
+
+              eventInfoHTML += "<b>End:</b> " + eventEndDateTime.getDate() + '-' + (eventEndDateTime.getMonth() + 1) + '-' + eventEndDateTime.getFullYear() + "  " +
+                  eventEndDateTime.toLocaleTimeString();
+              eventInfoHTML += "<br>";
+          }
+
+          if(eventDistance !== "") {
+              eventInfoHTML += "<br><b>Distance:</b> " + eventDistance;
+              eventInfoHTML += "<br>";
+          }
+
+          if(eventDescription !== "") {
+              eventInfoHTML += "<br><b>Description:</b><br>";
+              eventInfoHTML += eventDescription;
+          }
+
+          return eventInfoHTML;
+      }
+
+      // Determines if the current datetime is within the bounds of the event.
+      function isLocationDateTimeWithinEvent(locationDateTime) {
+
+          var currentDateTime = new Date();
+          if(currentDateTime < eventStartDateTime) return false;
+          else if(currentDateTime > eventEndDateTime) return false;
+          else return true;
+      }
 
     </script>
   </body>
