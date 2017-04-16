@@ -1,523 +1,497 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <title>Out on the trails live tracking</title>
-    <link rel="stylesheet" href="./openlayers/css/ol.css" type="text/css">
-    <!-- The line below is only needed for old environments like Internet Explorer and Android 4.x -->
-    <!--<script src="https://cdn.polyfill.io/v2/polyfill.min.js?features=requestAnimationFrame,Element.prototype.classList,URL"></script>-->
-    <script src="./openlayers/build/ol.js"></script>
-    <script src="./jquery/jquery-3.2.0.js"></script>
-    <link rel="stylesheet" href="./bootstrap/css/bootstrap.min.css">
-    <script src="./bootstrap/js/bootstrap.js"></script>
+<head>
+  <title>Out on the trails live tracking</title>
+  <link rel="stylesheet" href="./openlayers/css/ol.css" type="text/css">
+  <!-- The line below is only needed for old environments like Internet Explorer and Android 4.x -->
+  <!--<script src="https://cdn.polyfill.io/v2/polyfill.min.js?features=requestAnimationFrame,Element.prototype.classList,URL"></script>-->
+  <script src="./openlayers/build/ol.js"></script>
+  <script src="./jquery/jquery-3.2.0.js"></script>
+  <link rel="stylesheet" href="./bootstrap/css/bootstrap.min.css">
+  <script src="./bootstrap/js/bootstrap.js"></script>
+  <script src="./lib/datehandling.js"></script>
 
-    <style>
-      #countdowntimer {
-        position: absolute;
-        top: .5em;
-        left: 50px;
-        font-weight: bold;
-        font-size: 18px;
-      }
+  <style>
+    #countdowntimer {
+      position: absolute;
+      top: .5em;
+      left: 50px;
+      font-weight: bold;
+      font-size: 18px;
+    }
+    #zoomtorunnerbutton {
+      position: absolute;
+      top: .5em;
+      right: 10px;
+      border: none;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    #zoomoutbutton {
+      position: absolute;
+      top: 55px;
+      right: 10px;
+      border: none;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    #infobutton {
+      position: absolute;
+      top: 102px;
+      right: 10px;
+      border: none;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+      font-size: 16px;
+      cursor: pointer;
+    }
+  </style>
+</head>
 
-      #zoomtorunnerbutton {
-        position: absolute;
-        top: .5em;
-        right: 10px;
-        border: none;
-        text-align: center;
-        text-decoration: none;
-        display: inline-block;
-        font-size: 16px;
-        cursor: pointer;
-      }
+<body>
+<div id='countdowntimer'></div>
+<div id='zoomtorunnerbutton'><img src="./images/zoomtorunner.png" alt="Zoom to runner" onclick="onZoomToRunner()"
+                                  onmouseover="this.src='./images/zoomtorunner_highlight.png'"
+                                  onmouseout="this.src='./images/zoomtorunner.png'"></div>
 
-      #zoomoutbutton {
-        position: absolute;
-        top: 55px;
-        right: 10px;
-        border: none;
-        text-align: center;
-        text-decoration: none;
-        display: inline-block;
-        font-size: 16px;
-        cursor: pointer;
-      }
+<div id='zoomoutbutton'><img src="./images/zoomout.png" alt="Test" onclick="onZoomOut()"
+                             onmouseover="this.src='./images/zoomout_highlight.png'"
+                             onmouseout="this.src='./images/zoomout.png'"></div>
 
-      #infobutton {
-        position: absolute;
-        top: 102px;
-        right: 10px;
-        border: none;
-        text-align: center;
-        text-decoration: none;
-        display: inline-block;
-        font-size: 16px;
-        cursor: pointer;
-      }
-    </style>
-  </head>
-    
-  <body>
-  <div id='countdowntimer'></div>
-  <div id='zoomtorunnerbutton'><img src="./images/zoomtorunner.png" alt="Zoom to runner" onclick="onZoomToRunner()"
-                                    onmouseover="this.src='./images/zoomtorunner_highlight.png'"
-                                    onmouseout="this.src='./images/zoomtorunner.png'"></div>
+<div id='infobutton'><img src="./images/info.png" alt="Test" onclick="onInfo()"
+                          onmouseover="this.src='./images/info_highlight.png'"
+                          onmouseout="this.src='./images/info.png'"></div>
 
-  <div id='zoomoutbutton'><img src="./images/zoomout.png" alt="Test" onclick="onZoomOut()"
-                                    onmouseover="this.src='./images/zoomout_highlight.png'"
-                                    onmouseout="this.src='./images/zoomout.png'"></div>
+<div id="map" style="width: 100%; height: 100%; position:fixed">
+<div id="popup">'
+<div id="info">
 
-  <div id='infobutton'><img src="./images/info.png" alt="Test" onclick="onInfo()"
-                               onmouseover="this.src='./images/info_highlight.png'"
-                               onmouseout="this.src='./images/info.png'"></div>
 
-  <div id="map" style="width: 100%; height: 100%; position:fixed">
-  <div id="popup">'
-  <div id="info">
+      <script>
+          // Constants
+          var refreshrate = 90000; // The refresh rate at which the runner position is updated.
+          var gpxFilePath = './events/texel2017/course.gpx';
+          var eventInfoFilePath = './events/texel2017/eventinfo.xml';
 
-        
-    <script>
-      // Constants
-      var refreshrate = 90000; // The refresh rate at which the runner position is updated.
-      var gpxFilePath = './course/course.gpx';
-      var eventInfoFilePath = './events/eventinfo.xml';
+          // Event information variables.
+          var eventTitle = '';
+          var eventDescription = '';
+          var eventStartDateTime = null;
+          var eventEndDateTime = null;
+          var eventDistance = "";
 
-      // Event information variables.
-      var eventTitle = '';
-      var eventDescription = '';
-      var eventStartDateTime = null;
-      var eventEndDateTime = null;
-      var eventDistance = "";
 
-      var raster = new ol.layer.Tile({
-        source: new ol.source.OSM()
-      });
+          // Runner / tracker info variables.
+          var runnerInitialized = false;
+          var currentLongtitude = 0;
+          var currentLattitude = 0;
+          var batteryPercentage = 'unknown';
+          var runnerName = 'unknown';
+          var lastUpdate = 'unknown';
 
-      // Style definition of the track outline.
-      var style = {
-        'Point': new ol.style.Style({
-          image: new ol.style.Circle({
-            fill: new ol.style.Fill({
-              color: 'rgba(0,126,118,0.4)'
-            }),
-            radius: 3,
-            stroke: new ol.style.Stroke({
-              color: '#007e76',
-              width: 3
-            })
-          })
-        }),
-        'LineString': new ol.style.Style({
-          stroke: new ol.style.Stroke({
-            color: '#007e76',
-            width: 3
-          })
-        }),
-        'MultiLineString': new ol.style.Style({
-          stroke: new ol.style.Stroke({
-            color: '#007e76',
-            width: 4
-          })
-        })
-      };
-
-      // Define the styles of the icons used in the tracking..
-      var iconStyles = {
-          'checkpointicon': new ol.style.Style({
-              image: new ol.style.Icon({
-                  anchor: [0.5, 1],
-                  src: './images/checkpoint.png',
-                  scale: 0.3
+          // Style definition of the track outline.
+          var style = {
+              'Point': new ol.style.Style({
+                  image: new ol.style.Circle({
+                      fill: new ol.style.Fill({
+                          color: 'rgba(0,126,118,0.4)'
+                      }),
+                      radius: 3,
+                      stroke: new ol.style.Stroke({
+                          color: '#007e76',
+                          width: 3
+                      })
+                  })
+              }),
+              'LineString': new ol.style.Style({
+                  stroke: new ol.style.Stroke({
+                      color: '#007e76',
+                      width: 3
+                  })
+              }),
+              'MultiLineString': new ol.style.Style({
+                  stroke: new ol.style.Stroke({
+                      color: '#007e76',
+                      width: 4
+                  })
               })
-          }),
+          };
 
-          'startfinishicon': new ol.style.Style({
-              image: new ol.style.Icon({
-                  anchor: [0.5, 1],
-                  src: './images/startfinish.png',
-                  scale: 0.3
+          // Define the styles of the icons used in the tracking..
+          var iconStyles = {
+              'checkpointicon': new ol.style.Style({
+                  image: new ol.style.Icon({
+                      anchor: [0.5, 1],
+                      src: './images/checkpoint.png',
+                      scale: 0.3
+                  })
+              }),
+              'startfinishicon': new ol.style.Style({
+                  image: new ol.style.Icon({
+                      anchor: [0.5, 1],
+                      src: './images/startfinish.png',
+                      scale: 0.3
+                  })
+              }),
+              'runnericon': new ol.style.Style({
+                  image: new ol.style.Icon({
+                      anchor: [0.5, 1],
+                      src: './images/singlerunner.png',
+                      scale: 0.3
+                  })
               })
-          }),
+          };
 
-          'runnericon': new ol.style.Style({
-              image: new ol.style.Icon({
-                  anchor: [0.5, 1],
-                  src: './images/singlerunner.png',
-                  scale: 0.3
-              })
-          })
-      };
+          var raster = new ol.layer.Tile({
+              source: new ol.source.OSM()
+          });
 
-      /*
-       Load the GPX track as a vector layer.
-       */
-      var GPXTrack = new ol.layer.Vector({
-          source: new ol.source.Vector({
-              url: gpxFilePath,
-              format: new ol.format.GPX()
-          }),
-          style: function(feature) {
-              return style[feature.getGeometry().getType()];
-          }
-      });
-        
-        /*
-        Load the checkpoints and start finish location.
-        TODO: Add error handling to reading the checkpoints from the file.
-        */
+          var GPXTrack = initGPXTrack();
 
-      var checkpointSource = new ol.source.Vector({
-          //create empty vector
-      });
-
-      /*
-      Get's called when the page is loaded, used to initialize the configuration.
-      */
-      $(document).ready(function(){
-          // Load the event configuration from the XML file.
-        $.ajax({
-            type: "GET",
-            url: eventInfoFilePath,
-            dataType: "xml",
-            success: function(xml) {
-                // Read the event info from the XML file.
-                try {
-                    eventTitle = $(xml).find('eventname').text();
-                    eventDescription = $(xml).find('eventdescription').text();
-
-                    eventStartDateTime = new Date($(xml).find('startdatetime').text());
-                    eventEndDateTime = new Date($(xml).find('enddatetime').text());
-
-                    eventDistance = $(xml).find('eventdistance').text();
-                }
-                catch(err) {
-
-                }
-
-                // Read the course markers from the XML file.
-                $(xml).find('marker').each(function(){
-                    var name = $(this).find('name').text();
-                    var description = $(this).find('description').text();
-                    var distance = $(this).find('distance').text();
-                    var longtitude = $(this).find('lon').text();
-                    var latitude = $(this).find('lat').text();
-                    var type = $(this).find('type').text();
-
-                    addMarker(name, description, distance, longtitude, latitude, type);
-                });
-            }
-        });
-      });
-
-      function addMarker(name, description, distance, longtitude, latitude, type){
-
-          var icontype = '';
-
-          if(type === 'checkpoint') icontype = 'checkpointicon';
-          else if(type === 'startfinish') icontype = 'startfinishicon';
-          else icontype = 'checkpointicon';
-
-          checkpointSource.addFeature(
-              new ol.Feature({
-                name: name,
-                description: description + '<br>' + distance,
-                type: icontype,
-                geometry: new ol.geom.Point(ol.proj.fromLonLat([+(longtitude), +(latitude)]))
-              }));
-
-      }
-
-      // Create the vector layer with all the check point and start / finish markers.
-      var checkPointLayer = new ol.layer.Vector({
-          source: checkpointSource,
-          style: function (feature) {
-              return iconStyles[feature.get('type')];
-          }
-      });
-
-      // Define the runner icon with the initial start location on the course.
-      var runnerMarker = new ol.Feature({
-          type: 'runnericon',
-          geometry: new ol.geom.Point(ol.proj.fromLonLat([0,0]))
-      });
-
-      // Create the vector source to hold the runner icon.
-      var vectorSource = new ol.source.Vector({
-          features: [runnerMarker]
-      });
-
-      // Create a vector layer to contain the runner marker icon.
-      var runnerLayer = new ol.layer.Vector({
-          source: vectorSource,
-          style: function(feature) {
-              return iconStyles[feature.get('type')];
-          }
-      });
-
-      /*
-      Create the map with the different layers.
-      */
-      var map = new ol.Map({
-        layers: [raster, GPXTrack, checkPointLayer, runnerLayer],
-        target: document.getElementById('map'),
-
-        view: new ol.View({
-            center: [0, 0],
-            zoom: 11
-        })
-      });
-
-      // Zoom the map to fit the GPX track in the view.
-      GPXTrack.getSource().on("change", function(evt) {
-          extent = GPXTrack.getSource().getExtent();
-          map.getView().fit(extent, map.getSize());
-      });
-
-      /*
-      Add the zoom to runner, zoom out and info buttons to the page.
-      */
-      $('#zoomtorunnerbutton').appendTo($('.ol-overlaycontainer'));
-      $('#zoomoutbutton').appendTo($('.ol-overlaycontainer'));
-      $('#infobutton').appendTo($('.ol-overlaycontainer'));
-
-      // Buffer the tracker info from the tracking API.
-      var runnerInitialized = false;
-      var currentLongtitude = 0;
-      var currentLattitude = 0;
-
-      var batteryPercentage = 'unknown';
-      var runnerName = 'unknown';
-      var lastUpdate = 'unknown';
-      var currentSpeed = 'unknown';
-      var completedDistance = 'unknown';
-
-      var getDataTimer = window.setInterval(getTrackerData, 30000);
-
-      // Set the initial position of the runner icon to the current location of the tracker.
-      getTrackerData();
-
-      // Define the event that get's triggered when the tracker info is updated.
-      function OnTrackerInfoUpdated(state) {
-          var evt = $.Event('TrackerInfoUpdated');
-          evt.state = state;
-
-          $(window).trigger(evt);
-      }
-
-      /*
-      Event handler called when the tracker info has been updated.
-      */
-      $(window).on('TrackerInfoUpdated', function (e) {
-
-          if(!runnerInitialized) {
-              setRunnerPosition();
-              runnerInitialized = true;
-          }
-      });
-
-      /*
-      Create and handle the refresh timer countdown.
-      */
-      var countdownCounter = refreshrate / 1000;
-      var timer = window.setInterval(countdownTimerInterval, 1000);
-
-      $('#countdowntimer').appendTo($('.ol-overlaycontainer'));
-
-      function countdownTimerInterval(){
-
-          countdownCounter--;
-
-          // Display the updated countdown timer.
-          var out = "Next refresh in: " + countdownCounter + 's';
-          $('#countdowntimer').text(out);
-
-          if (countdownCounter === 0) {
-
-              // Update the runner position and info from the buffered data when the refresh timer has elapsed.
-              setRunnerPosition();
-
-              countdownCounter = refreshrate / 1000;
-          }
-
-      }
-
-      /*
-      This function get's called by an interval timer and retrieves the current data of the tracker.
-       */
-      function getTrackerData(){
-
-          $.ajax({
-              url: './trackerinfo.php',
-              success: function (response) {
-                  // Process the response to retrieve the current location of the tracker and the timestamp of this position.
-                  var responseObj = JSON.parse(response.toString());
-
-                  if (responseObj !== null) {
-
-                      currentLattitude = +(responseObj.lat);
-                      currentLongtitude = +(responseObj.lng);
-
-                      OnTrackerInfoUpdated(null);
+          // Load the GPX track as a vector layer.
+          function initGPXTrack() {
+              var tracklayer = new ol.layer.Vector({
+                  source: new ol.source.Vector({
+                      url: gpxFilePath,
+                      format: new ol.format.GPX()
+                  }),
+                  style: function (feature) {
+                      return style[feature.getGeometry().getType()];
                   }
-                  else {
+              });
 
-                      // process the error.
+              return tracklayer;
+          }
+
+          /*
+           Load the checkpoints and start finish location.
+           TODO: Add error handling to reading the checkpoints from the file.
+           */
+          /*
+           Get's called when the page is loaded, used to initialize the configuration.
+           */
+          $(document).ready(function(){
+              // Load the event configuration from the XML file.
+              $.ajax({
+                  type: "GET",
+                  url: eventInfoFilePath,
+                  dataType: "xml",
+                  success: function(xml) {
+                      // Read the event info from the XML file.
+                      try {
+                          eventTitle = $(xml).find('eventname').text();
+                          eventDescription = $(xml).find('eventdescription').text();
+
+                          eventStartDateTime = getDateFromString($(xml).find('startdatetime').text());
+                          eventEndDateTime = getDateFromString($(xml).find('enddatetime').text());
+
+                          eventDistance = $(xml).find('eventdistance').text();
+                      }
+                      catch(err) {
+                      }
+                      // Read the course markers from the XML file.
+                      $(xml).find('marker').each(function(){
+                          var name = $(this).find('name').text();
+                          var description = $(this).find('description').text();
+                          var distance = $(this).find('distance').text();
+                          var longtitude = $(this).find('lon').text();
+                          var latitude = $(this).find('lat').text();
+                          var type = $(this).find('type').text();
+                          addMarker(name, description, distance, longtitude, latitude, type);
+                      });
                   }
-              },
-              error: function (response) {
-                  // alert('[Error retrieving GPS tracker data] - ' + response.toString());
-                  // process the error.
+              });
+          });
+
+
+          function addMarker(name, description, distance, longtitude, latitude, type){
+              var icontype = '';
+              if(type === 'checkpoint') icontype = 'checkpointicon';
+              else if(type === 'startfinish') icontype = 'startfinishicon';
+              else icontype = 'checkpointicon';
+              checkpointSource.addFeature(
+                  new ol.Feature({
+                      name: name,
+                      description: description + '<br>' + distance,
+                      type: icontype,
+                      geometry: new ol.geom.Point(ol.proj.fromLonLat([+(longtitude), +(latitude)]))
+                  }));
+          }
+
+          // Create empty vector
+          var checkpointSource = new ol.source.Vector({
+
+          });
+
+          // Create the vector layer with all the check point and start / finish markers.
+          var checkPointLayer = new ol.layer.Vector({
+              source: checkpointSource,
+              style: function (feature) {
+                  return iconStyles[feature.get('type')];
               }
           });
-      }
 
-      /*
-      Update the position of the runner on the map.
-      */
-      function setRunnerPosition(){
+          // Define the runner icon with the initial start location on the course.
+          var runnerMarker = new ol.Feature({
+              type: 'runnericon',
+              geometry: new ol.geom.Point(ol.proj.fromLonLat([0,0]))
+          });
+          // Create the vector source to hold the runner icon.
+          var vectorSource = new ol.source.Vector({
+              features: [runnerMarker]
+          });
+          // Create a vector layer to contain the runner marker icon.
+          var runnerLayer = new ol.layer.Vector({
+              source: vectorSource,
+              style: function(feature) {
+                  return iconStyles[feature.get('type')];
+              }
+          });
 
-          vectorSource.clear();
+          /*
+           Create the map with the different layers.
+           */
+          var map = new ol.Map({
+              layers: [raster, GPXTrack, checkPointLayer, runnerLayer],
+              target: document.getElementById('map'),
+              view: new ol.View({
+                  center: [0, 0],
+                  zoom: 11
+              }),
+              controls: ol.control.defaults().extend([
+                  new ol.control.ScaleLine()])
+          });
 
-          // Draw the current location of the runner if the current date and time is during the configured event.
-          if(isLocationDateTimeWithinEvent(new Date())) {
-              runnerMarker.setGeometry(new ol.geom.Point(ol.proj.fromLonLat([currentLongtitude, currentLattitude])));
+          // Zoom the map to fit the GPX track in the view.
+          GPXTrack.getSource().on("change", function(evt) {
+              extent = GPXTrack.getSource().getExtent();
+              map.getView().fit(extent, map.getSize());
+          });
 
-              vectorSource.addFeature(runnerMarker);
+          /*
+           Add the zoom to runner, zoom out and info buttons to the page.
+           */
+          $('#zoomtorunnerbutton').appendTo($('.ol-overlaycontainer'));
+          $('#zoomoutbutton').appendTo($('.ol-overlaycontainer'));
+          $('#infobutton').appendTo($('.ol-overlaycontainer'));
+
+          // Buffer the tracker info from the tracking API.
+          var getDataTimer = window.setInterval(getTrackerData, 30000);
+
+          // Set the initial position of the runner icon to the current location of the tracker.
+          getTrackerData();
+
+          // Define the event that get's triggered when the tracker info is updated.
+          function OnTrackerInfoUpdated(state) {
+              var evt = $.Event('TrackerInfoUpdated');
+              evt.state = state;
+              $(window).trigger(evt);
           }
-      }
 
-      /*
-      Get's fired when the user clicks the zoom to runner button and moves the map to the runner while zooming in.
-      */
-      function onZoomToRunner() {
-          if((currentLattitude !== 0) && (currentLongtitude !== 0) && isLocationDateTimeWithinEvent()) {
+          /*
+           Event handler called when the tracker info has been updated.
+           */
+          $(window).on('TrackerInfoUpdated', function (e) {
+              if(!runnerInitialized) {
+                  setRunnerPosition();
+                  runnerInitialized = true;
+              }
+          });
 
-              map.getView().animate({
-                  center: ol.proj.fromLonLat([currentLongtitude, currentLattitude]),
-                  duration: 2000,
-                  zoom: 16
+          /*
+           Create and handle the refresh timer countdown.
+           */
+          var countdownCounter = refreshrate / 1000;
+          var timer = window.setInterval(countdownTimerInterval, 1000);
+          $('#countdowntimer').appendTo($('.ol-overlaycontainer'));
+          function countdownTimerInterval(){
+              countdownCounter--;
+              // Display the updated countdown timer.
+              var out = "Next refresh in: " + countdownCounter + 's';
+              $('#countdowntimer').text(out);
+              if (countdownCounter === 0) {
+                  // Update the runner position and info from the buffered data when the refresh timer has elapsed.
+                  setRunnerPosition();
+                  countdownCounter = refreshrate / 1000;
+              }
+          }
+
+          /*
+           This function get's called by an interval timer and retrieves the current data of the tracker.
+           */
+          function getTrackerData(){
+              $.ajax({
+                  url: './trackerinfo.php',
+                  success: function (response) {
+                      // Process the response to retrieve the current location of the tracker and the timestamp of this position.
+                      var responseObj = JSON.parse(response.toString());
+                      if (responseObj !== null) {
+                          currentLattitude = +(responseObj.lat);
+                          currentLongtitude = +(responseObj.lng);
+                          OnTrackerInfoUpdated(null);
+                      }
+                      else {
+                          // process the error.
+                      }
+                  },
+                  error: function (response) {
+                      // alert('[Error retrieving GPS tracker data] - ' + response.toString());
+                      // process the error.
+                  }
               });
           }
-      }
 
-      /*
-      Get's fired when the zoom out button is clicked and zooms out until the entire course fits the screen again.
-       */
-      function onZoomOut() {
-          extent = GPXTrack.getSource().getExtent();
-          map.getView().fit(extent, map.getSize());
-      }
-
-      /*
-      Get's fired when the info button is clicked.
-      */
-      function onInfo() {
-          showEventInfoPopUp();
-      }
-
-      /*
-      Handle the pop-ups of the markers on the course.
-      */
-      var element = document.getElementById('popup');
-
-      var popup = new ol.Overlay({
-          element: element,
-          positioning: 'bottom-center',
-          stopEvent: false,
-          offset: [0, -50]
-      });
-      map.addOverlay(popup);
-
-      // display popup on click
-      map.on('click', function(evt){
-          var feature = map.forEachFeatureAtPixel(evt.pixel,
-              function(feature){
-                  return feature;
+          /*
+           Update the position of the runner on the map.
+           */
+          function setRunnerPosition(){
+              vectorSource.clear();
+              // Draw the current location of the runner if the current date and time is during the configured event.
+              if(isLocationDateTimeWithinEvent(new Date())) {
+                  runnerMarker.setGeometry(new ol.geom.Point(ol.proj.fromLonLat([currentLongtitude, currentLattitude])));
+                  vectorSource.addFeature(runnerMarker);
               }
-          );
+          }
 
-          if (feature){
-              popup.setPosition(feature.getGeometry().getCoordinates());
+          /*
+           Get's fired when the user clicks the zoom to runner button and moves the map to the runner while zooming in.
+           */
+          function onZoomToRunner() {
+              if((currentLattitude !== 0) && (currentLongtitude !== 0) && isLocationDateTimeWithinEvent()) {
+                  map.getView().animate({
+                      center: ol.proj.fromLonLat([currentLongtitude, currentLattitude]),
+                      duration: 2000,
+                      zoom: 16
+                  });
+              }
+          }
 
-              $(element).attr('data-placement', 'auto top');
+          /*
+           Get's fired when the zoom out button is clicked and zooms out until the entire course fits the screen again.
+           */
+          function onZoomOut() {
+              extent = GPXTrack.getSource().getExtent();
+              map.getView().fit(extent, map.getSize());
+          }
+
+          /*
+           Get's fired when the info button is clicked.
+           */
+          function onInfo() {
+              showEventInfoPopUp();
+          }
+
+          /*
+           Handle the pop-ups of the markers on the course.
+           */
+          var element = document.getElementById('popup');
+          var popup = new ol.Overlay({
+              element: element,
+              positioning: 'bottom-center',
+              stopEvent: false,
+              offset: [0, -50]
+          });
+
+          map.addOverlay(popup);
+          // display popup on click
+          map.on('click', function(evt){
+              var feature = map.forEachFeatureAtPixel(evt.pixel,
+                  function(feature){
+                      return feature;
+                  }
+              );
+              if (feature){
+                  popup.setPosition(feature.getGeometry().getCoordinates());
+                  $(element).attr('data-placement', 'auto top');
+                  $(element).attr('data-html', true);
+                  $(element).attr('data-container', 'body');
+                  $(element).attr('max-width', '100%');
+                  $(element).attr('data-original-title', feature.get('name'));
+                  $(element).attr('data-content', feature.get('description'));
+                  $(element).popover('show');
+              }
+              else{
+                  $(element).popover('destroy');
+              }
+          });
+
+          // Change mouse cursor when over marker
+          map.on('pointermove', function(e) {
+              if (e.dragging) {
+                  $(element).popover('destroy');
+                  return;
+              }
+              var pixel = map.getEventPixel(e.originalEvent);
+              var hit = map.hasFeatureAtPixel(pixel);
+              map.getTarget().style.cursor = hit ? 'pointer' : '';
+          });
+
+          // Displays a popup with the event info.
+          function showEventInfoPopUp() {
+
+              popup.setPosition(map.getCoordinateFromPixel([document.getElementById('infobutton').getBoundingClientRect().left,
+                  (document.getElementById('infobutton').getBoundingClientRect().top + 80)]));
+
+              $(element).attr('data-placement', 'left');
               $(element).attr('data-html', true);
               $(element).attr('data-container', 'body');
               $(element).attr('max-width', '100%');
-              $(element).attr('data-original-title', feature.get('name'));
-              $(element).attr('data-content', feature.get('description'));
+              $(element).attr('data-original-title', eventTitle);
+              $(element).attr('data-content', buildEventInfoText());
               $(element).popover('show');
           }
-          else{
-              $(element).popover('destroy');
-          }
-      });
 
-      // Change mouse cursor when over marker
-      map.on('pointermove', function(e) {
+          // Builds and returns a formatted text displaying the event information from the event xml file.
+          function buildEventInfoText() {
+              var eventInfoHTML = "";
+              if((eventStartDateTime !== null) && (eventEndDateTime !== null)) {
 
-          if (e.dragging) {
-              $(element).popover('destroy');
-              return;
-          }
+                  eventInfoHTML += "<table><tr><td>" + "<b>Start:</b></td>";
+                  eventInfoHTML += "<td>&nbsp;&nbsp;&nbsp;&nbsp;" + eventStartDateTime.toDateString() + "</td></tr>";
+                  eventInfoHTML += "<tr><td></td>";
+                  eventInfoHTML += "<td>&nbsp;&nbsp;&nbsp;&nbsp;" + timeStringFromDate(eventStartDateTime) + "</td></tr></table>";
 
-          var pixel = map.getEventPixel(e.originalEvent);
-          var hit = map.hasFeatureAtPixel(pixel);
-          map.getTarget().style.cursor = hit ? 'pointer' : '';
-
-      });
-
-      // Displays a popup with the event info.
-      function showEventInfoPopUp() {
-
-          popup.setPosition(map.getCoordinateFromPixel([document.getElementById('infobutton').getBoundingClientRect().left,
-              (document.getElementById('infobutton').getBoundingClientRect().top + 80)]));
-
-          $(element).attr('data-placement', 'auto left');
-          $(element).attr('data-html', true);
-          $(element).attr('data-container', 'body');
-          $(element).attr('max-width', '100%');
-          $(element).attr('data-original-title', eventTitle);
-          $(element).attr('data-content', buildEventInfoText());
-          $(element).popover('show');
-      }
-
-      // Builds and returns a formatted text displaying the event information from the event xml file.
-      function buildEventInfoText() {
-
-          var eventInfoHTML = "";
-
-          if((eventStartDateTime !== null) && (eventEndDateTime !== null)) {
-              eventInfoHTML = "<b>Start:</b> " + eventStartDateTime.getDate() + '-' + (eventStartDateTime.getMonth() + 1) + '-' + eventStartDateTime.getFullYear() + "  " +
-                  eventStartDateTime.toLocaleTimeString();
-              eventInfoHTML += "<br>";
-
-              eventInfoHTML += "<b>End:</b> " + eventEndDateTime.getDate() + '-' + (eventEndDateTime.getMonth() + 1) + '-' + eventEndDateTime.getFullYear() + "  " +
-                  eventEndDateTime.toLocaleTimeString();
-              eventInfoHTML += "<br>";
+                  eventInfoHTML += "<table><tr><td>" + "<b>End:</b></td>";
+                  eventInfoHTML += "<td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" + eventEndDateTime.toDateString() + "</td></tr>";
+                  eventInfoHTML += "<tr><td></td>";
+                  eventInfoHTML += "<td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" + timeStringFromDate(eventEndDateTime) + "</td></tr></table>";
+              }
+              if(eventDistance !== "") {
+                  eventInfoHTML += "<br><b>Distance:</b> " + eventDistance;
+                  eventInfoHTML += "<br>";
+              }
+              if(eventDescription !== "") {
+                  eventInfoHTML += "<br><b>Description:</b><br>";
+                  eventInfoHTML += eventDescription;
+              }
+              return eventInfoHTML;
           }
 
-          if(eventDistance !== "") {
-              eventInfoHTML += "<br><b>Distance:</b> " + eventDistance;
-              eventInfoHTML += "<br>";
+          // Determines if the current datetime is within the bounds of the event.
+          function isLocationDateTimeWithinEvent(locationDateTime) {
+
+              var currentDateTime = new Date();
+
+              var eventStartDateTimeComp = new Date(eventStartDateTime);
+              var eventEndDateTimeComp = new Date(eventEndDateTime);
+
+              // Create compensated start and end date objects to ensure that the tracking is working one
+              // hour before and one hour after the event.
+              eventStartDateTimeComp.setHours(eventStartDateTime.getHours() - 1);
+              eventEndDateTimeComp.setHours(eventEndDateTime.getHours() + 1);
+
+              if(currentDateTime < eventStartDateTimeComp) return false;
+              else if(currentDateTime > eventEndDateTimeComp) return false;
+              else return true;
           }
 
-          if(eventDescription !== "") {
-              eventInfoHTML += "<br><b>Description:</b><br>";
-              eventInfoHTML += eventDescription;
-          }
-
-          return eventInfoHTML;
-      }
-
-      // Determines if the current datetime is within the bounds of the event.
-      function isLocationDateTimeWithinEvent(locationDateTime) {
-
-          var currentDateTime = new Date();
-          if(currentDateTime < eventStartDateTime) return false;
-          else if(currentDateTime > eventEndDateTime) return false;
-          else return true;
-      }
-
-    </script>
-  </body>
+      </script>
+</body>
 </html>
