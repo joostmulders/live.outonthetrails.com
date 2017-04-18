@@ -106,20 +106,20 @@
                       radius: 3,
                       stroke: new ol.style.Stroke({
                           color: '#007e76',
-                          width: 3
+                          width: 5
                       })
                   })
               }),
               'LineString': new ol.style.Style({
                   stroke: new ol.style.Stroke({
                       color: '#007e76',
-                      width: 3
+                      width: 5
                   })
               }),
               'MultiLineString': new ol.style.Style({
                   stroke: new ol.style.Stroke({
                       color: '#007e76',
-                      width: 4
+                      width: 5
                   })
               })
           };
@@ -243,10 +243,12 @@
               type: 'runnericon',
               geometry: new ol.geom.Point(ol.proj.fromLonLat([0,0]))
           });
+
           // Create the vector source to hold the runner icon.
           var vectorSource = new ol.source.Vector({
               features: [runnerMarker]
           });
+
           // Create a vector layer to contain the runner marker icon.
           var runnerLayer = new ol.layer.Vector({
               source: vectorSource,
@@ -355,6 +357,7 @@
               vectorSource.clear();
               // Draw the current location of the runner if the current date and time is during the configured event.
               if(isLocationDateTimeWithinEvent(new Date())) {
+
                   runnerMarker.setGeometry(new ol.geom.Point(ol.proj.fromLonLat([currentLongtitude, currentLattitude])));
                   vectorSource.addFeature(runnerMarker);
               }
